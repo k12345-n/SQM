@@ -11,16 +11,13 @@ pipeline {
 
         stage('Build & Compile') {
             steps {
-                // Verifies the code is functionally correct and compiles
-                sh 'mvn clean compile'
+                sh '/opt/homebrew/bin/mvn clean compile'
             }
         }
 
         stage('Unit Testing') {
             steps {
-                // Triggers Member 3's JUnit tests
-                // This ensures "Functional Suitability" as per the research paper
-                sh 'mvn test'
+                sh '/opt/homebrew/bin/mvn test'
             }
         }
 
