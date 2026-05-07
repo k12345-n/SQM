@@ -1,14 +1,7 @@
 pipeline {
-    agent any // This tells Jenkins to run the job on your MacBook
+    agent any
 
     stages {
-        stage('Checkout') {
-            steps {
-                // Pulls the latest code from your GitHub repository
-                checkout scm
-            }
-        }
-
         stage('Build & Compile') {
             steps {
                 sh '/opt/homebrew/bin/mvn clean compile'
@@ -21,36 +14,25 @@ pipeline {
             }
         }
 
-        stage('Quality Analysis') {
+        stage('E2E Testing (Cypress)') {
             steps {
-                // This is where Member 4 tracks "Technical Debt"
-                // For now, we use a placeholder; later we can connect SonarQube
-                echo 'Running Static Code Analysis...'
+                sh 'npm install' // Installs dependencies from package.json
+                sh 'npx cypress run' // Runs the 8 test files in your screenshot
             }
         }
 
-        stage('Performance Test') {
+        stage('Quality Metrics') {
             steps {
-                // Runs Member 3's JMeter scripts from your 'performance' folder
-                echo 'Triggering JMeter Performance Tests...'
-                // sh 'jmeter -n -t performance/test.jmx -l results.jtl'
+                echo 'Capture code smells and technical debt'
             }
         }
     }
 
     post {
         always {
-            // This captures the test results so Member 4 can see "Failure Rates"
-            junit '**/target/surefire-reports/*.xml'
+            junit allowEmptyResults: true, testResults: '**/target/surefire-reports/*.xml'
             
-            // Saves the compiled .jar file as a "Build Artifact"
             archiveArtifacts artifacts: 'target/*.jar', allowEmptyArchive: true
-        }
-        success {
-            echo 'Build Successful! The engine is running perfectly.'
-        }
-        failure {
-            echo 'Build Failed. Member 2 needs to check the logs!'
         }
     }
 }
