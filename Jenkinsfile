@@ -16,8 +16,8 @@ pipeline {
 
         stage('E2E Testing (Cypress)') {
             steps {
-                sh 'npm install' // Installs dependencies from package.json
-                sh 'npx cypress run' // Runs the 8 test files in your screenshot
+                sh '/usr/local/bin/npm install'
+        	sh '/usr/local/bin/npx cypress run'
             }
         }
 
