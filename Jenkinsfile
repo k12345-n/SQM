@@ -19,9 +19,9 @@ pipeline {
 
         stage('Run Application') {
             steps {
-                sh 'java -Dspring.security.enabled=false -jar spring-petclinic-main/target/*.jar &'
-        	echo 'Giving the server 45 seconds to fully initialize without security locks...'
-        	sleep 45
+                sh 'java -Dspring.autoconfigure.exclude=org.springframework.boot.autoconfigure.security.servlet.SecurityAutoConfiguration -jar spring-petclinic-main/target/*.jar &'
+        	echo 'Waiting 50 seconds for the UNSECURED server to start...'
+        	sleep 50
             }
         }
 
