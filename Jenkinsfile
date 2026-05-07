@@ -59,12 +59,9 @@ pipeline {
         always {
             // Member 2: Ensuring the background app is closed after tests finish
             // This prevents "Address already in use" errors on the next build
-            sh 'pkill -f java || true'
+            sh "pkill -f 'target/.*.jar' || true"
             
-            // Captures JUnit results for Member 4's Trend Charts
             junit allowEmptyResults: true, testResults: '**/target/surefire-reports/*.xml'
-            
-            // Archives the final JAR file for Member 1's records
             archiveArtifacts artifacts: 'target/*.jar', allowEmptyArchive: true
         }
         success {
