@@ -19,8 +19,8 @@ pipeline {
 
         stage('Run Application') {
             steps {
-                sh 'java -jar spring-petclinic-main/target/*.jar &'
-        	echo 'Waiting 45 seconds for the real application to start...'
+                sh 'java -Dspring.security.enabled=false -jar spring-petclinic-main/target/*.jar &'
+        	echo 'Giving the server 45 seconds to fully initialize without security locks...'
         	sleep 45
             }
         }
