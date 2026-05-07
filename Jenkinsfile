@@ -14,16 +14,14 @@ pipeline {
                 dir('spring-petclinic-main') {
             		sh 'mvn clean package -DskipTests'
         	}
-        	// Copy the fresh JAR to the root so the next stage can find it
-        	sh 'cp spring-petclinic-main/target/*.jar target/'
             }
         }
 
         stage('Run Application') {
             steps {
-                sh 'java -jar target/*.jar &'
-        	echo 'Waiting 40 seconds for the secured app to start...'
-        	sleep 40
+                sh 'java -jar spring-petclinic-main/target/*.jar &'
+        	echo 'Waiting 45 seconds for the real application to start...'
+        	sleep 45
             }
         }
 
