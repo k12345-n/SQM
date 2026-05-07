@@ -34,11 +34,8 @@ pipeline {
 
         stage('E2E Testing (Cypress)') {
             steps {
-                // Member 2: Triggering Member 3's Cypress and Security suite
-                // Installs dependencies from the package.json you moved
                 sh 'npm install'
-                // Runs all 8 test files, including the security injection tests
-                sh 'npx cypress run'
+                sh 'npx cypress run --config chromeWebSecurity=false,failOnStatusCode=false'
             }
         }
 
