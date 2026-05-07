@@ -25,8 +25,8 @@ pipeline {
                 sh 'java -jar target/*.jar &'
                 
                 // Wait 20 seconds for the Spring Boot server to fully wake up
-                echo 'Waiting for Spring PetClinic to start on port 8080...'
-                sleep 20 
+                echo 'Giving the server 40 seconds to fully initialize...'
+        	sleep 40
             }
         }
 
