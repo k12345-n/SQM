@@ -11,21 +11,18 @@ pipeline {
 
         stage('Build & Compile') {
             steps {
-                // Builds the executable JAR file for the application
-                // -DskipTests is used here because we run them in the next stages
-                sh 'mvn clean package -DskipTests'
+                dir('spring-petclinic-main') {
+            		sh 'mvn clean package -DskipTests'
+        	}
+        	// Copy the fresh JAR to the root so the next stage can find it
+        	sh 'cp spring-petclinic-main/target/*.jar target/'
             }
         }
 
         stage('Run Application') {
             steps {
-                // Member 2: Orchestrating the environment
-                // Starts the Spring Boot app in the background (&)
-                // This prevents the 403 Forbidden error in Cypress
                 sh 'java -jar target/*.jar &'
-                
-                // Wait 20 seconds for the Spring Boot server to fully wake up
-                echo 'Giving the server 40 seconds to fully initialize...'
+        	echo 'Waiting 40 seconds for the secured app to start...'
         	sleep 40
             }
         }
