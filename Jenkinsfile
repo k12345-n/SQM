@@ -4,25 +4,28 @@ pipeline {
     stages {
         stage('Build & Compile') {
             steps {
-                sh '/opt/homebrew/bin/mvn clean compile'
+                // Now works automatically due to your Global Path setting
+                sh 'mvn clean compile'
             }
         }
 
         stage('Unit Testing') {
             steps {
-                sh '/opt/homebrew/bin/mvn test'
+                sh 'mvn test'
             }
         }
 
         stage('E2E Testing (Cypress)') {
             steps {
-                sh '/usr/local/bin/npm install'
-        	sh '/usr/local/bin/npx cypress run'
+                // Member 2: Orchestrating the automation for Member 3
+                sh 'npm install'
+                sh 'npx cypress run'
             }
         }
 
         stage('Quality Metrics') {
             steps {
+                // Member 4's data point for Technical Debt
                 echo 'Capture code smells and technical debt'
             }
         }
@@ -30,8 +33,8 @@ pipeline {
 
     post {
         always {
+            // Captures test data for Member 4's visualization
             junit allowEmptyResults: true, testResults: '**/target/surefire-reports/*.xml'
-            
             archiveArtifacts artifacts: 'target/*.jar', allowEmptyArchive: true
         }
     }
