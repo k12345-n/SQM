@@ -29,6 +29,13 @@ pipeline {
                 sh 'npx cypress run --config baseUrl=http://localhost:8081,failOnStatusCode=false || true'
             }
         }
+
+	stage('Performance Testing (JMeter)') {
+            steps {
+                // Member 2 Fix: Running the JMeter file from the new path Member 3 added
+                sh 'jmeter -n -t src/test/jmeter/*.jmx -l target/jmeter-results.jtl'
+            }
+        }
     }
 
     post {
