@@ -46,17 +46,19 @@ describe('Add Visit – Validation', () => {
     cy.contains(/must not be empty|required|error/i).should('be.visible')
   })
 
-  it('TC-VIS-04: submitting with invalid date shows error', () => {
-    cy.get('#date').clear().type('2025-99-99')
-    cy.get('#description').clear().type('Test visit')
-    cy.get('button[type="submit"]').click()
-    cy.contains(/invalid|date|error/i).should('be.visible')
-  })
+  it('TC-VIS-04: invalid date is rejected', () => {
+  cy.get('#date').clear().type('2025-02-30')
+  cy.get('#description').clear().type('Test visit')
+  cy.get('button[type="submit"]').click()
+
+  cy.contains(/invalid date/i).should('be.visible')
+})
 
   it('TC-VIS-05: submitting with empty date shows error', () => {
+    cy.get('#date').clear()
     cy.get('#description').clear().type('Test visit with no date')
     cy.get('button[type="submit"]').click()
-    cy.contains(/must not be empty|required|date|error/i).should('be.visible')
+    cy.contains(/invalid date/i).should('be.visible')
   })
 })
 

@@ -50,7 +50,7 @@ describe('Add Owner – Required Field Validation', () => {
     cy.get('#city').type(validOwner.city)
     cy.get('#telephone').type(validOwner.telephone)
     cy.get('button[type="submit"]').click()
-    cy.contains(/must not be empty|required|error/i).should('be.visible')
+    cy.contains(/must not be blank/i).should('be.visible')
   })
 
   it('TC-AO-05: submitting with empty last name shows error', () => {
@@ -59,7 +59,7 @@ describe('Add Owner – Required Field Validation', () => {
     cy.get('#city').type(validOwner.city)
     cy.get('#telephone').type(validOwner.telephone)
     cy.get('button[type="submit"]').click()
-    cy.contains(/must not be empty|required|error/i).should('be.visible')
+    cy.contains(/must not be blank/i).should('be.visible')
   })
 
   it('TC-AO-06: submitting with empty address shows error', () => {
@@ -68,7 +68,7 @@ describe('Add Owner – Required Field Validation', () => {
     cy.get('#city').type(validOwner.city)
     cy.get('#telephone').type(validOwner.telephone)
     cy.get('button[type="submit"]').click()
-    cy.contains(/must not be empty|required|error/i).should('be.visible')
+    cy.contains(/must not be blank/i).should('be.visible')
   })
 
   it('TC-AO-07: submitting with empty city shows error', () => {
@@ -77,7 +77,7 @@ describe('Add Owner – Required Field Validation', () => {
     cy.get('#address').type(validOwner.address)
     cy.get('#telephone').type(validOwner.telephone)
     cy.get('button[type="submit"]').click()
-    cy.contains(/must not be empty|required|error/i).should('be.visible')
+    cy.contains(/must not be blank/i).should('be.visible')
   })
 
   it('TC-AO-08: submitting with empty telephone shows error', () => {
@@ -86,13 +86,13 @@ describe('Add Owner – Required Field Validation', () => {
     cy.get('#address').type(validOwner.address)
     cy.get('#city').type(validOwner.city)
     cy.get('button[type="submit"]').click()
-    cy.contains(/must not be empty|required|error|numeric/i).should('be.visible')
+    cy.contains(/must not be blank|numeric/i).should('be.visible')
   })
 
   it('TC-AO-09: completely empty form shows validation errors', () => {
     cy.get('button[type="submit"]').click()
     cy.url().should('include', '/owners/new') // stays on page
-    cy.contains(/must not be empty|required|error/i).should('be.visible')
+    cy.contains(/must not be blank/i).should('be.visible')
   })
 })
 
@@ -160,6 +160,6 @@ describe('Edit Owner', () => {
 
     cy.get('#firstName').clear()
     cy.get('button[type="submit"]').click()
-    cy.contains(/must not be empty|required|error/i).should('be.visible')
+    cy.contains(/must not be blank/i).should('be.visible')
   })
 })

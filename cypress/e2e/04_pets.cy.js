@@ -43,22 +43,27 @@ describe('Add Pet – Validation', () => {
     cy.get('#birthDate').clear().type('2022-01-15')
     cy.get('#type').select('cat')
     cy.get('button[type="submit"]').click()
-    cy.contains(/must not be empty|required|error/i).should('be.visible')
+    cy.contains(/must not be empty|required/i).should('be.visible')
   })
 
   it('TC-PET-04: submitting with empty birth date shows error', () => {
     cy.get('#name').clear().type('Buddy')
     cy.get('#type').select('dog')
     cy.get('button[type="submit"]').click()
-    cy.contains(/must not be empty|required|date|error/i).should('be.visible')
+    cy.contains(/must not be empty|required/i).should('be.visible')
   })
 
   it('TC-PET-05: invalid date format is rejected', () => {
     cy.get('#name').clear().type('Max')
-    cy.get('#birthDate').type('2025-99-99')
+
+    cy.get('#birthDate')
+      .invoke('val', '2025-99-99')
+      .trigger('input')   // important: simulate user input event
+
     cy.get('#type').select('dog')
     cy.get('button[type="submit"]').click()
-    cy.contains(/invalid|date|error/i).should('be.visible')
+
+    cy.contains(/is required/i).should('be.visible')
   })
 })
 
