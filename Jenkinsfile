@@ -9,11 +9,13 @@ pipeline {
         
         stage('Build & Compile') {
             steps {
-                script {
-                    if (isUnix()) {
-                        sh 'mvn clean package -DskipTests'
-                    } else {
-                        bat 'mvn clean package -DskipTests'
+                dir('spring-petclinic-main') {
+                    script {
+                        if (isUnix()) {
+                            sh 'mvn clean package -DskipTests'
+                        } else {
+                            bat 'mvn clean package -DskipTests'
+                        }
                     }
                 }
             }
@@ -39,14 +41,14 @@ pipeline {
                 script {
                     if (isUnix()) {
                         sh '''
-                            for file in src/test/jmeter/*.jmx; do
+                            for file in spring-petclinic-main/src/test/jmeter/*.jmx; do
                                 jmeter -n -t "$file" -l "target/jmeter-results.jtl"
                             done
                         '''
                     } else {
                         bat '''
                             IF NOT EXIST target MD target
-                            for %%f in (src\\test\\jmeter\\*.jmx) do (
+                            for %%f in (spring-petclinic-main\\src\\test\\jmeter\\*.jmx) do (
                                 jmeter -n -t "%%f" -l "target\\jmeter-results.jtl"
                             )
                         '''
@@ -74,6 +76,7 @@ pipeline {
     
     post {
         always {
+            // Jenkins tracking metrics and chart generators
             junit allowEmptyResults: true, testResults: '**/target/surefire-reports/*.xml'
             perfReport errorFailedThreshold: 100, errorUnstableThreshold: 80, sourceDataFiles: 'target/jmeter-results.jtl'
             
