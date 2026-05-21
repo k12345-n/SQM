@@ -1,6 +1,21 @@
+version: '3.8'
+
 services:
+  # The Core Spring Boot Application Engine
+  petclinic-app:
+    build:
+      context: ./spring-petclinic-main
+      dockerfile: Dockerfile
+    ports:
+      - "8081:8081"
+    depends_on:
+      - mysql
+      - postgres
+    restart: always
+
+  # Relational Database Service: MySQL
   mysql:
-    image: mysql:9.6
+    image: mysql:9.0
     ports:
       - "3306:3306"
     environment:
@@ -11,8 +26,10 @@ services:
       - MYSQL_DATABASE=petclinic
     volumes:
       - "./conf.d:/etc/mysql/conf.d:ro"
+
+  # Relational Database Service: PostgreSQL
   postgres:
-    image: postgres:18.3
+    image: postgres:15
     ports:
       - "5432:5432"
     environment:

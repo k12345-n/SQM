@@ -2,8 +2,11 @@ pipeline {
     agent any
     stages {
         stage('Source Code Management') {
-            steps { checkout scm }
+            steps { 
+                checkout scm 
+            }
         }
+        
         stage('Build & Compile') {
             steps {
                 dir('spring-petclinic-main') {
@@ -17,19 +20,7 @@ pipeline {
                 }
             }
         }
-        stage('Run App') {
-            steps {
-                script {
-                    if (isUnix()) {
-                        sh 'java -Dserver.port=8081 -Dspring.autoconfigure.exclude=org.springframework.boot.autoconfigure.security.servlet.SecurityAutoConfiguration -jar spring-petclinic-main/target/*.jar &'
-                    } else {
-                        powershell 'Start-Process java -ArgumentList "-Dserver.port=8081 -Dspring.autoconfigure.exclude=org.springframework.boot.autoconfigure.security.servlet.SecurityAutoConfiguration -jar spring-petclinic-main/target/spring-petclinic-4.0.0-SNAPSHOT.jar"'
-                    }
-                }
-                echo 'Waiting 50s for server on Port 8081...'
-                sleep 50
-            }
-        }
+        
         stage('E2E Testing (Cypress)') {
             steps {
                 script {
@@ -44,6 +35,7 @@ pipeline {
                 }
             }
         }
+        
         stage('Performance Testing (JMeter)') {
             steps {
                 script {
@@ -64,17 +56,27 @@ pipeline {
                 }
             }
         }
+
+        stage('Deploy (Local Docker Compose)') {
+            steps {
+                echo 'Deploying integrated services matrix to local Docker Engine...'
+                script {
+                    if (isUnix()) {
+                        sh 'docker-compose down || true'
+                        sh 'docker-compose up -d --build'
+                    } else {
+                        bat 'docker-compose down || rem'
+                        bat 'docker-compose up -d --build'
+                    }
+                }
+                echo 'Application is live and containerized at http://localhost:8081'
+            }
+        }
     }
+    
     post {
         always {
-            script {
-                if (isUnix()) {
-                    sh "pkill -f 'spring-petclinic' || true"
-                } else {
-                    bat 'wmic process where "commandline like \'%%spring-petclinic%%\'" call terminate || label true'
-                }
-            }
-            
+            // Jenkins tracking metrics and chart generators
             junit allowEmptyResults: true, testResults: '**/target/surefire-reports/*.xml'
             perfReport errorFailedThreshold: 100, errorUnstableThreshold: 80, sourceDataFiles: 'target/jmeter-results.jtl'
             
@@ -82,7 +84,7 @@ pipeline {
                 if (fileExists('cypress/reports')) {
                     publishHTML(target: [reportDir: 'cypress/reports', reportFiles: 'index.html', reportName: 'Cypress E2E Report'])
                 } else {
-                    echo "Skipping HTML report: cypress/reports folder not found."
+                    echo "Skipping HTML report generation: cypress/reports folder missing."
                 }
             }
         }
