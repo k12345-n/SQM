@@ -8,16 +8,16 @@ pipeline {
             }
         }
         
-        stage('Build & Compile') {
+        stage('Build, Test & Coverage') {
             steps {
                 dir('spring-petclinic-main') {
                     script {
                         if (isUnix()) {
-                            echo "Detected Mac/Linux environment. Compiling via sh..."
-                            sh 'mvn clean package -DskipTests'
+                            echo "Detected Mac/Linux environment. Compiling and triggering JaCoCo metrics..."
+                            sh 'mvn clean package jacoco:report'
                         } else {
-                            echo "Detected Windows environment. Compiling via bat..."
-                            bat 'mvn clean package -DskipTests'
+                            echo "Detected Windows environment. Compiling and triggering JaCoCo metrics..."
+                            bat 'mvn clean package jacoco:report'
                         }
                     }
                 }
@@ -29,18 +29,16 @@ pipeline {
                 script {
                     if (isUnix()) {
                         echo "Detected Mac environment. Running macOS E2E orchestration..."
-                        // 1. Clear any stale background process hanging on port 8081
+                        // Clear any stale background process hanging on port 8081
                         sh 'lsof -t -i:8081 | xargs kill -9 || true'
                         
-                        // 2. Clear previous JUnit results from any prior run and create directory shell
-                        sh 'rm -rf cypress/results || true'
-                        sh 'mkdir -p cypress/results'
+                        // Clear previous results and create target folders cleanly
+                        sh 'rm -rf spring-petclinic-main/cypress/results || true'
+                        sh 'mkdir -p spring-petclinic-main/cypress/results'
                         
-                        // 3. FIX: Move inside subfolder first to launch the compiled package target safely
                         echo "Launching Spring Boot App in background (Mac)..."
                         sh 'cd spring-petclinic-main && java -jar target/spring-petclinic-4.0.0-SNAPSHOT.jar --server.port=8081 > ../app.log 2>&1 &'
                         
-                        // 4. Wait-for-health loop: Polls the actuator endpoint until awake (Max 120s)
                         echo "Waiting for server to become healthy on port 8081..."
                         sh '''
                             for i in {1..60}; do
@@ -50,12 +48,9 @@ pipeline {
                                 fi
                                 sleep 2
                             done
-                            echo "===== App did not start in 120s -- app.log below ====="
-                            cat app.log
                             exit 1
                         '''
                         
-                        // 5. Install dependencies and execute Cypress E2E tests
                         sh 'chmod -R 755 node_modules/.bin/cypress || true'
                         sh 'npm install --no-audit --no-fund'
                         sh 'npx cypress run --config baseUrl=http://localhost:8081'
@@ -67,7 +62,7 @@ pipeline {
                         bat 'start "" /B "%JAVA_HOME%\\bin\\java" -jar spring-petclinic-main\\target\\spring-petclinic-4.0.0-SNAPSHOT.jar --server.port=8081'
                         bat 'powershell -NoProfile -Command "for ($i=0; $i -lt 60; $i++) { try { Invoke-WebRequest -UseBasicParsing http://localhost:8081/actuator/health -TimeoutSec 3 | Out-Null; Write-Host \'App is up on 8081\'; exit 0 } catch { Start-Sleep -Seconds 2 } }; Write-Host \'App did not start on 8081 within 120s\'; exit 1"' 
                         bat 'npm install'
-                        bat 'if exist cypress\\results rmdir /s /q cypress\\results'
+                        bat 'if exist spring-petclinic-main\\cypress\\results rmdir /s /q spring-petclinic-main\\cypress\\results'
                         bat 'npx cypress run --config baseUrl=http://localhost:8081'
                     }
                 }
@@ -92,7 +87,6 @@ pipeline {
                     if (isUnix()) {
                         echo "Detected Mac environment. Launching app instance for JMeter..."
                         sh 'lsof -t -i:8081 | xargs kill -9 || true'
-                        // FIX: Adjust subfolder contextual paths for the load testing target execution phase
                         sh 'cd spring-petclinic-main && java -jar target/spring-petclinic-4.0.0-SNAPSHOT.jar --server.port=8081 > ../jmeter-app.log 2>&1 &'
                         
                         sh '''
@@ -175,12 +169,16 @@ pipeline {
     
     post {
         always {
-            junit allowEmptyResults: true, testResults: 'cypress/results/*.xml, **/target/surefire-reports/*.xml'
+            // FIX: Corrected target folder context prefixes across all reporting hooks
+            junit allowEmptyResults: true, testResults: 'spring-petclinic-main/cypress/results/*.xml, spring-petclinic-main/target/surefire-reports/*.xml'
+            
+            jacoco execPattern: 'spring-petclinic-main/target/*.exec', classPattern: 'spring-petclinic-main/target/classes', sourcePattern: 'spring-petclinic-main/src/main/java'
+            
             perfReport errorFailedThreshold: 100, errorUnstableThreshold: 80, sourceDataFiles: 'target/jmeter-results.jtl'
             
             script {
-                if (fileExists('cypress/reports')) {
-                    publishHTML(target: [reportDir: 'cypress/reports', reportFiles: 'index.html', reportName: 'Cypress E2E Report'])
+                if (fileExists('spring-petclinic-main/cypress/reports')) {
+                    publishHTML(target: [reportDir: 'spring-petclinic-main/cypress/reports', reportFiles: 'index.html', reportName: 'Cypress E2E Report'])
                 } else {
                     echo "Skipping HTML report generation: cypress/reports folder missing."
                 }
