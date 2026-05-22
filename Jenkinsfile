@@ -17,8 +17,7 @@ pipeline {
         stage('Prepare & E2E Testing') {
             steps {
                 dir('spring-petclinic-main') {
-                    // 1. Force a clean install of dependencies
-                    sh 'rm -rf node_modules package-lock.json'
+                    // 1. Install dependencies and ensure binary is ready
                     sh 'npm install'
                     
                     // 2. Kill anything on port 8081
@@ -27,21 +26,20 @@ pipeline {
                     // 3. Start app
                     sh 'java -jar target/spring-petclinic-4.0.0-SNAPSHOT.jar --server.port=8081 > ../app.log 2>&1 &'
                     
-                    // 4. Wait for app
+                    // 4. Wait for health check
                     sh '''
                         for i in {1..60}; do
-                            if curl -s http://localhost:8081/actuator/health | grep -q '"status":"UP"'; then exit 0; fi
+                            if curl -s http://localhost:8081/actuator/health | grep -q \'"status":"UP"\'; then exit 0; fi
                             sleep 2
                         done
                         exit 1
                     '''
                     
-                    // 5. Run Cypress using absolute node_modules path
-                    sh './node_modules/.bin/cypress run --config baseUrl=http://localhost:8081'
+                    // 5. Use 'npx' directly, it is the safest way to find the cypress binary
+                    sh 'npx cypress run --config baseUrl=http://localhost:8081'
                 }
             }
         }
-    }
     
     post {
         always {
