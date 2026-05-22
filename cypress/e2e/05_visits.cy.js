@@ -47,18 +47,26 @@ describe('Add Visit – Validation', () => {
   })
 
   it('TC-VIS-04: invalid date is rejected', () => {
-  cy.get('#date').clear().type('2025-02-30')
-  cy.get('#description').clear().type('Test visit')
-  cy.get('button[type="submit"]').click()
+    // A <input type="date"> won't accept an impossible calendar date like Feb 30
+    // (cy.type() would error), so force the raw value. The browser normalises the
+    // invalid value to empty, and on submit the server-side @NotNull rejects it.
+    cy.get('#date').invoke('val', '2025-02-30')
+    cy.get('#description').clear().type('Test visit')
+    cy.get('button[type="submit"]').click()
 
-  cy.contains(/invalid date/i).should('be.visible')
-})
+    // The visit must NOT be created: we stay on the form and a field error is shown.
+    cy.url().should('include', '/visits/new')
+    cy.get('.help-inline, .has-error').should('exist')
+  })
 
   it('TC-VIS-05: submitting with empty date shows error', () => {
     cy.get('#date').clear()
     cy.get('#description').clear().type('Test visit with no date')
     cy.get('button[type="submit"]').click()
-    cy.contains(/invalid date/i).should('be.visible')
+
+    // @NotNull on the date field rejects the empty value: stays on the form with an error.
+    cy.url().should('include', '/visits/new')
+    cy.get('.help-inline, .has-error').should('exist')
   })
 })
 
