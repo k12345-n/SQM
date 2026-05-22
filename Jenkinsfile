@@ -29,18 +29,13 @@ pipeline {
                 script {
                     if (isUnix()) {
                         echo "Detected Mac environment. Running macOS E2E orchestration..."
-                        // 1. Clear any stale background process hanging on port 8081
                         sh 'lsof -t -i:8081 | xargs kill -9 || true'
-                        
-                        // 2. Clear previous JUnit results from any prior run and create directory shell
                         sh 'rm -rf cypress/results || true'
                         sh 'mkdir -p cypress/results'
                         
-                        // 3. FIX: Move inside subfolder first to launch the compiled package target safely
                         echo "Launching Spring Boot App in background (Mac)..."
                         sh 'cd spring-petclinic-main && java -jar target/spring-petclinic-4.0.0-SNAPSHOT.jar --server.port=8081 > ../app.log 2>&1 &'
                         
-                        // 4. Wait-for-health loop: Polls the actuator endpoint until awake (Max 120s)
                         echo "Waiting for server to become healthy on port 8081..."
                         sh '''
                             for i in {1..60}; do
@@ -50,12 +45,9 @@ pipeline {
                                 fi
                                 sleep 2
                             done
-                            echo "===== App did not start in 120s -- app.log below ====="
-                            cat app.log
                             exit 1
                         '''
                         
-                        // 5. Install dependencies and execute Cypress E2E tests
                         sh 'chmod -R 755 node_modules/.bin/cypress || true'
                         sh 'npm install --no-audit --no-fund'
                         sh 'npx cypress run --config baseUrl=http://localhost:8081'
@@ -92,7 +84,6 @@ pipeline {
                     if (isUnix()) {
                         echo "Detected Mac environment. Launching app instance for JMeter..."
                         sh 'lsof -t -i:8081 | xargs kill -9 || true'
-                        // FIX: Adjust subfolder contextual paths for the load testing target execution phase
                         sh 'cd spring-petclinic-main && java -jar target/spring-petclinic-4.0.0-SNAPSHOT.jar --server.port=8081 > ../jmeter-app.log 2>&1 &'
                         
                         sh '''
@@ -175,7 +166,13 @@ pipeline {
     
     post {
         always {
+            // Standard Junit tests trend graph
             junit allowEmptyResults: true, testResults: 'cypress/results/*.xml, **/target/surefire-reports/*.xml'
+            
+            // ADDED: Collects JaCoCo binary trace metrics and renders trend charts on sidebar
+            jacoco execPattern: '**/target/*.exec', classPattern: '**/target/classes', sourcePattern: '**/src/main/java'
+            
+            // JMeter performance trend graph
             perfReport errorFailedThreshold: 100, errorUnstableThreshold: 80, sourceDataFiles: 'target/jmeter-results.jtl'
             
             script {
