@@ -1,0 +1,12 @@
+# Deployment compose file (the "CD" target).
+# Runs the image Jenkins just built on the same Docker host.
+# Uses the default in-memory H2 database, so no external DB is required.
+services:
+  petclinic:
+    image: petclinic:latest
+    container_name: petclinic-app
+    ports:
+      - "8080:8080"
+    restart: unless-stopped
+    environment:
+      - SPRING_PROFILES_ACTIVE=default
