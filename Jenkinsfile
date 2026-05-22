@@ -55,13 +55,12 @@ pipeline {
                         '''
                         
                         // 5. Install dependencies and execute Cypress E2E tests
-                        sh 'chmod -R 755 node_modules/.bin/cypress || true'
+                        sh 'chmod -R 755 node_modules/.bin/cypress'
                         sh 'npm install --no-audit --no-fund'
                         sh 'npx cypress run --config baseUrl=http://localhost:8081'
                         
                     } else {
                         echo "Detected Windows environment. Running Windows E2E orchestration..."
-                        // Eric's Windows Setup
                         bat(script: 'docker-compose down', returnStatus: true)
                         bat 'powershell -NoProfile -Command "Get-NetTCPConnection -LocalPort 8081 -State Listen -ErrorAction SilentlyContinue | Select-Object -ExpandProperty OwningProcess -Unique | ForEach-Object { Stop-Process -Id $_ -Force -ErrorAction SilentlyContinue }; exit 0"'
                         bat 'start "" /B "%JAVA_HOME%\\bin\\java" -jar spring-petclinic-main\\target\\spring-petclinic-4.0.0-SNAPSHOT.jar --server.port=8081'
@@ -107,9 +106,12 @@ pipeline {
                         
                         echo "Running Unix JMeter performance plans..."
                         sh 'mkdir -p target'
-                        for file in spring-petclinic-main/src/test/jmeter/*.jmx; do
-                            jmeter -n -t "$file" -l "target/jmeter-results.jtl"
-                        done
+                        // FIXED: Correctly wrapped the dynamic file expansion loop within bash execution context
+                        sh '''
+                            for file in spring-petclinic-main/src/test/jmeter/*.jmx; do
+                                jmeter -n -t "$file" -l "target/jmeter-results.jtl"
+                            done
+                        '''
                     } else {
                         echo "Detected Windows environment. Running Windows JMeter test..."
                         bat 'powershell -NoProfile -Command "Get-NetTCPConnection -LocalPort 8081 -State Listen -ErrorAction SilentlyContinue | Select-Object -ExpandProperty OwningProcess -Unique | ForEach-Object { Stop-Process -Id $_ -Force -ErrorAction SilentlyContinue }; exit 0"'
