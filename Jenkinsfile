@@ -61,18 +61,10 @@ pipeline {
                         
                     } else {
                         echo "Detected Windows environment. Running Windows E2E orchestration..."
-                        // 1. Clear Windows stale environments
                         bat(script: 'docker-compose down', returnStatus: true)
                         bat 'powershell -NoProfile -Command "Get-NetTCPConnection -LocalPort 8081 -State Listen -ErrorAction SilentlyContinue | Select-Object -ExpandProperty OwningProcess -Unique | ForEach-Object { Stop-Process -Id $_ -Force -ErrorAction SilentlyContinue }; exit 0"'
-                        
-                        // 2. Launch background process using simplified pathing matching subfolder structure
-                        echo "Launching Spring Boot App in background (Windows)..."
                         bat 'start "" /B "%JAVA_HOME%\\bin\\java" -jar spring-petclinic-main\\target\\spring-petclinic-4.0.0-SNAPSHOT.jar --server.port=8081'
-                        
-                        // 3. Health confirmation poll
                         bat 'powershell -NoProfile -Command "for ($i=0; $i -lt 60; $i++) { try { Invoke-WebRequest -UseBasicParsing http://localhost:8081/actuator/health -TimeoutSec 3 | Out-Null; Write-Host \'App is up on 8081\'; exit 0 } catch { Start-Sleep -Seconds 2 } }; Write-Host \'App did not start on 8081 within 120s\'; exit 1"' 
-                        
-                        // 4. Clean and execute tests
                         bat 'npm install'
                         bat 'if exist cypress\\results rmdir /s /q cypress\\results'
                         bat 'npx cypress run --config baseUrl=http://localhost:8081'
