@@ -29,17 +29,12 @@ pipeline {
                 script {
                     if (isUnix()) {
                         echo "Detected Mac environment. Running macOS E2E orchestration..."
-                        // 1. Clear any stale background process hanging on port 8081
                         sh 'lsof -t -i:8081 | xargs kill -9 || true'
-                        
-                        // 2. Clear previous JUnit results from any prior run
                         sh 'rm -rf cypress/results || true'
                         
-                        // 3. Launch Spring Boot application in the background cleanly using Unix '&'
                         echo "Launching Spring Boot App in background (Mac)..."
                         sh 'java -jar spring-petclinic-main/target/spring-petclinic-4.0.0-SNAPSHOT.jar --server.port=8081 > app.log 2>&1 &'
                         
-                        // 4. Wait-for-health loop: Polls the actuator endpoint until awake (Max 120s)
                         echo "Waiting for server to become healthy on port 8081..."
                         sh '''
                             for i in {1..60}; do
@@ -49,12 +44,9 @@ pipeline {
                                 fi
                                 sleep 2
                             done
-                            echo "===== App did not start in 120s -- app.log below ====="
-                            cat app.log
                             exit 1
                         '''
                         
-                        // 5. Install dependencies and execute Cypress E2E tests
                         sh 'chmod -R 755 node_modules/.bin/cypress || true'
                         sh 'npm install --no-audit --no-fund'
                         sh 'npx cypress run --config baseUrl=http://localhost:8081'
@@ -173,6 +165,7 @@ pipeline {
     
     post {
         always {
+            // Generates the trend charts on the left menu automatically
             junit allowEmptyResults: true, testResults: 'cypress/results/*.xml, **/target/surefire-reports/*.xml'
             perfReport errorFailedThreshold: 100, errorUnstableThreshold: 80, sourceDataFiles: 'target/jmeter-results.jtl'
             

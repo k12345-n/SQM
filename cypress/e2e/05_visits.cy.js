@@ -47,14 +47,16 @@ describe('Add Visit – Validation', () => {
   })
 
   it('TC-VIS-04: invalid date is rejected', () => {
-    // FIX: Bypasses the HTML5 date input typing constraint crash by leaving the field empty 
-    // to test fallback submission validation framework matching behavior.
-    cy.get('#date').clear()
+    // A <input type="date"> won't accept an impossible calendar date like Feb 30
+    // (cy.type() would error), so force the raw value. The browser normalises the
+    // invalid value to empty, and on submit the server-side @NotNull rejects it.
+    cy.get('#date').invoke('val', '2025-02-30')
     cy.get('#description').clear().type('Test visit')
     cy.get('button[type="submit"]').click()
 
-    // FIX: Broadens validation target matching constraints to correctly capture Spring Boot backend alerts
-    cy.contains(/must not be null|required|invalid|error/i).should('be.visible')
+    // The visit must NOT be created: we stay on the form and a field error is shown.
+    cy.url().should('include', '/visits/new')
+    cy.get('.help-inline, .has-error').should('exist')
   })
 
   it('TC-VIS-05: submitting with empty date shows error', () => {
@@ -62,8 +64,9 @@ describe('Add Visit – Validation', () => {
     cy.get('#description').clear().type('Test visit with no date')
     cy.get('button[type="submit"]').click()
 
-    // FIX: Replaced precise /invalid date/ literal string lookups to match standard localized framework responses
-    cy.contains(/must not be null|required|invalid|error/i).should('be.visible')
+    // @NotNull on the date field rejects the empty value: stays on the form with an error.
+    cy.url().should('include', '/visits/new')
+    cy.get('.help-inline, .has-error').should('exist')
   })
 })
 
