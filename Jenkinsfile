@@ -6,29 +6,27 @@ pipeline {
             steps { checkout scm }
         }
         
-        stage('Build, Test & Coverage') {
+        stage('Build & Compile') {
             steps {
                 dir('spring-petclinic-main') {
-                    // Use -DskipITs to prevent Docker/Postgres container errors
-                    sh 'mvn clean package jacoco:report -DskipITs'
+                    // Added jacoco:report here so the data exists for the sidebar
+                    sh 'mvn clean package jacoco:report -DskipTests'
                 }
             }
         }
         
         stage('E2E Testing (Cypress)') {
             steps {
-                dir('spring-petclinic-main') {
-                    script {
-                        // 1. Clean stale processes
+                script {
+                    dir('spring-petclinic-main') {
                         sh 'lsof -t -i:8081 | xargs kill -9 || true'
+                        sh 'rm -rf cypress/results || true'
+                        sh 'mkdir -p cypress/results'
                         
-                        // 2. Install dependencies (if node_modules is missing, this creates it)
-                        sh 'npm install'
-                        
-                        // 3. Start app
+                        echo "Launching App..."
                         sh 'java -jar target/spring-petclinic-4.0.0-SNAPSHOT.jar --server.port=8081 > ../app.log 2>&1 &'
                         
-                        // 4. Health check
+                        // Wait for health check
                         sh '''
                             for i in {1..60}; do
                                 if curl -s http://localhost:8081/actuator/health | grep -q \'"status":"UP"\'; then exit 0; fi
@@ -37,16 +35,31 @@ pipeline {
                             exit 1
                         '''
                         
-                        // 5. Run Cypress safely
-                        // We use 'npx' directly; it automatically finds the cypress binary 
-                        // in node_modules, bypassing permission/path issues.
+                        // Run Cypress (using npx to avoid path/permission issues)
+                        sh 'npm install'
                         sh 'npx cypress run --config baseUrl=http://localhost:8081'
+                    }
+                }
+            }
+            post {
+                always {
+                    script {
+                        sh 'lsof -t -i:8081 | xargs kill -9 || true'
                     }
                 }
             }
         }
         
-        stage('Deploy') {
+        stage('Performance Testing (JMeter)') {
+            steps {
+                dir('spring-petclinic-main') {
+                    sh 'mkdir -p target'
+                    sh 'jmeter -n -t src/test/jmeter/performance_test.jmx -l target/jmeter-results.jtl || true'
+                }
+            }
+        }
+
+        stage('Deploy (Local Docker Compose)') {
             steps {
                 dir('spring-petclinic-main') {
                     sh 'docker-compose down || true'
@@ -58,16 +71,20 @@ pipeline {
     
     post {
         always {
-            // Pathing matches your exact folder structure
+            // 1. JUnit Test Trend (Sidebar)
             junit allowEmptyResults: true, testResults: 'spring-petclinic-main/cypress/results/*.xml, spring-petclinic-main/target/surefire-reports/*.xml'
             
-            jacoco execPattern: 'spring-petclinic-main/target/*.exec', classPattern: 'spring-petclinic-main/target/classes', sourcePattern: 'spring-petclinic-main/src/main/java'
+            // 2. JaCoCo Coverage Trend (Sidebar)
+            // It MUST look in the target folder where 'mvn jacoco:report' put it
+            jacoco execPattern: 'spring-petclinic-main/target/jacoco.exec', 
+                   classPattern: 'spring-petclinic-main/target/classes', 
+                   sourcePattern: 'spring-petclinic-main/src/main/java'
             
-            script {
-                if (fileExists('spring-petclinic-main/target/jmeter-results.jtl')) {
-                    perfReport errorFailedThreshold: 100, errorUnstableThreshold: 80, sourceDataFiles: 'spring-petclinic-main/target/jmeter-results.jtl'
-                }
-            }
+            // 3. Performance Trend (Sidebar)
+            perfReport errorFailedThreshold: 100, errorUnstableThreshold: 80, sourceDataFiles: 'spring-petclinic-main/target/jmeter-results.jtl'
+            
+            // 4. HTML Reports
+            publishHTML(target: [reportDir: 'spring-petclinic-main/cypress/reports', reportFiles: 'index.html', reportName: 'Cypress E2E Report'])
         }
     }
 }
