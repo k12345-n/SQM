@@ -18,7 +18,7 @@ pipeline {
             steps {
                 script {
                     // Compiles code, runs validations, and builds the executable .jar file
-                    sh 'chmod +x mvnw && ./mvnw clean package -DskipTests'
+                    sh 'mvn clean package -DskipTests'
                 }
             }
         }
@@ -26,7 +26,7 @@ pipeline {
         stage('Unit Testing (JUnit + JaCoCo)') {
             steps {
                 script {
-                    sh './mvnw test'
+                    sh 'mvn test'
                 }
             }
             post {
