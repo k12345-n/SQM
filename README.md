@@ -94,7 +94,6 @@ The same experimental approach is followed as in the paper which are before/afte
 
 <!-- FIGURE 2: Test Pyramid (from paper, Figure 7) -->
 <img width="504" height="396" alt="Test Pyramid" src="https://github.com/user-attachments/assets/d4e0aac6-d02f-42aa-8ec1-978543ffab3f" />
-
 *Figure 2: Test Pyramid (source: Kato et al., 2022, adapted from Mike Cohn).*
 
 #### Modified Components
@@ -164,7 +163,7 @@ To validate our pipeline and compare our results with the paper's findings, we c
 ## 1. Automated Pipeline Overview
 This repository utilizes a comprehensive Continuous Integration and Continuous Testing (CI/CT) workflow managed via **Jenkins**. The pipeline enforces software quality gates at every phase of the development lifecycle, ensuring that codebase modifications are verified before deployment.
 
-### Monorepo System Architecture
+### 🏢 Monorepo System Architecture
 To facilitate unified pipeline execution, an **Integrated Monorepo** pattern was established at the repository root:
 * `spring-petclinic-main/` - Core Java Spring Boot application (System Under Test).
 * `cypress/` - Automated End-to-End (E2E) UI test suites.
@@ -202,7 +201,7 @@ Post-Build Actions: Configured automated parsing hooks via Jenkins (junit and pe
 
 ## Results & Analysis
 
-The implementation of the DevOps CI/CD pipeline across two distinct experimental phases yielded substantial empirical data regarding the impact of quality-driven Key Performance Indicators (KPIs). By systematically gathering metrics through Jenkins, JaCoCo, Cypress, and JMeter, the following observations were made:
+The implementation of the DevOps CI/CD pipeline across two distinct experimental phases yielded substantial empirical data regarding the impact of quality-driven Key Performance Indicators (KPIs). By systematically gathering metrics through Jenkins, JaCoCo, SonarQube, Cypress, and JMeter, the following observations were made:
 
 ### 1. Test Density and The Testing Pyramid
 In Phase 1, the pipeline relied exclusively on a baseline of 57 JUnit unit tests. While these executed quickly, they only provided narrow coverage of the backend service layers. In Phase 2, explicitly targeting **Usability** and **Functional Suitability** (per the ISO/IEC 25010 model) drove the team to expand the Test Pyramid by adding 92 Cypress End-to-End (E2E) tests. This resulted in a total test density of 149 tests—a massive **161% increase**. This shift transformed the pipeline from a simple integration check into a comprehensive behavioral validation system.
@@ -221,10 +220,10 @@ API response times, measured via JMeter, showed an increase from an average of 4
 
 Despite handling **80,000 simulated requests** under this heavier data-write load, the system maintained a **0.00% error rate**. This confirms the system's robust Reliability and Performance Efficiency, proving the architecture can handle sustained stress without service interruption.
 
-### 4. Unit Test Coverage Stagnation
-An unexpected but vital finding was the stagnation of internal coverage metrics. Across both phases, JaCoCo Test Coverage remained entirely static at 91.90%. 
-* **The limit of Dynamic Testing:** This highlights a fundamental reality of DevOps engineering. Expanding external dynamic black-box testing (Cypress and JMeter) does not artificially inflate internal code coverage metrics. 
-* **Tool Blindspots:** Furthermore, JaCoCo exclusively monitors Java bytecode execution during JUnit testing and is fundamentally blind to external JavaScript-based browser testing. Therefore, while our *actual* functional coverage expanded massively through Cypress, our internal structural metrics remained static.
+### 4. Static Code Analysis and Technical Debt Reality
+An unexpected but vital finding was the stagnation of static metrics. Across both phases, Security Issues remained at 10 (Grade D), Maintainability Issues remained at 17 (Grade A), and JaCoCo Test Coverage remained static at 91.90%. 
+* **The limit of Dynamic Testing:** This highlights a fundamental reality of DevOps engineering. Expanding external dynamic black-box testing (Cypress and JMeter) does not magically refactor bad internal source code. 
+* **Tool Blindspots:** Furthermore, JaCoCo exclusively monitors Java bytecode execution during JUnit testing and is fundamentally blind to external JavaScript-based browser testing. Therefore, while our *actual* functional coverage expanded massively, our internal structural metrics remained static. This proves that achieving holistic software quality requires a dedicated balance of both code refactoring (resolving technical debt) and pipeline testing.
 
 ---
 
@@ -237,11 +236,8 @@ Our findings strongly align with the core thesis presented by Kato et al. (2022)
 * **Reduction of Escaped Defects:** The referenced paper noted that focusing on specific quality characteristics reduced the number of unpredicted bugs escaping into production by 68%. Similarly, our Phase 1 baseline completely missed 4 critical defects that were immediately caught in Phase 2 once *Usability* and *Appropriateness* were formally mapped to our testing stages.
 
 ### Divergence and Methodological Adaptations
-
-While both our project and the Kato et al. study successfully utilized **Jenkins** as the core Continuous Integration orchestrator, our specific implementation diverged in project management enforcement and metric aggregation to better suit a modern web stack:
-
-* **Pipeline Quality Gates vs. Agile Managerial Tracking:** The original study managed its quality characteristics by manually adding items to Jira and visually tracking conformance sprint-by-sprint on a Kanban board. To adapt this for a stricter DevOps environment, we shifted this responsibility from the project manager to the CI/CD pipeline itself. Instead of just visualizing progress, our pipeline acts as an uncompromising automated enforcer, physically blocking deployments (Build `FAILED`) when End-to-End functional metrics drop below 100%.
-* **Metric Aggregation (Custom Code vs. Distributed Plugins):** To track their KPIs, the original researchers had to develop a custom C# tool backed by an SQL Server, utilizing a custom `Report` class to merge functional and performance XML data into a single HTML view. Rather than writing custom reporting software, we utilized a "best-of-breed" distributed approach. Our metrics were deliberately siloed across specialized tools (JaCoCo for Unit Coverage, Cypress for UI validation, JMeter for Performance metrics). While this provided deeper, highly specialized insights for each ISO/IEC 25010 characteristic, it required us to rely on native Jenkins plugins (`junit` and `perfReport`) to aggregate the final quality picture directly on the Jenkins dashboard.
+* **Automated vs. Manual Enforcement:** While the research paper focused heavily on Agile project management—relying on manual tracking of quality characteristics sprint-by-sprint—our implementation strictly automated these gates within a Jenkins CI/CD pipeline. Our pipeline acts as an uncompromising enforcer, physically blocking deployments (Build `FAILED`) when E2E metrics drop below 100%, whereas the original study relied on human managerial oversight.
+* **Separation of Diagnostic Tools:** The original study utilized a custom C# reporting tool to aggregate functional and performance tests natively into a single MS Test pane. To adapt this to modern, open-source DevOps environments, our metrics were deliberately siloed (JaCoCo for Unit, Cypress for E2E, JMeter for Performance, SonarQube for SAST). This distributed toolchain provided deeper, specialized insights but required manual data aggregation to form a complete quality picture.
 
 ---
 
