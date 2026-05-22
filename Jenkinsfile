@@ -10,12 +10,8 @@ pipeline {
             steps {
                 dir('spring-petclinic-main') {
                     script {
-                        // Use -DskipITs to prevent PostgresIntegrationTests from crashing
-                        if (isUnix()) {
-                            sh 'mvn clean package jacoco:report -DskipITs'
-                        } else {
-                            bat 'mvn clean package jacoco:report -DskipITs'
-                        }
+                        // Using -DskipITs to avoid Docker container file-not-found errors
+                        sh 'mvn clean package jacoco:report -DskipITs'
                     }
                 }
             }
@@ -24,11 +20,22 @@ pipeline {
         stage('E2E Testing (Cypress)') {
             steps {
                 script {
-                    sh 'rm -rf spring-petclinic-main/cypress/results || true'
-                    sh 'mkdir -p spring-petclinic-main/cypress/results'
-                    sh 'cd spring-petclinic-main && java -jar target/spring-petclinic-4.0.0-SNAPSHOT.jar --server.port=8081 > ../app.log 2>&1 &'
-                    // ... health check logic ...
-                    sh 'cd spring-petclinic-main && npm install && npx cypress run --config baseUrl=http://localhost:8081'
+                    dir('spring-petclinic-main') {
+                        // 1. Grant execution rights to Cypress binary
+                        sh 'chmod -R 755 node_modules/.bin/cypress || true'
+                        
+                        // 2. Clear stale processes and logs
+                        sh 'lsof -t -i:8081 | xargs kill -9 || true'
+                        sh 'rm -rf cypress/results || true'
+                        sh 'mkdir -p cypress/results'
+                        
+                        // 3. Start app
+                        sh 'java -jar target/spring-petclinic-4.0.0-SNAPSHOT.jar --server.port=8081 > ../app.log 2>&1 &'
+                        
+                        // 4. Run tests
+                        sh 'npm install'
+                        sh 'npx cypress run --config baseUrl=http://localhost:8081'
+                    }
                 }
             }
         }
@@ -43,13 +50,16 @@ pipeline {
     
     post {
         always {
-            // These lines generate the widgets on your dashboard sidebar
+            // Updated paths to ensure Jenkins can find your generated reports
             junit allowEmptyResults: true, testResults: 'spring-petclinic-main/cypress/results/*.xml, spring-petclinic-main/target/surefire-reports/*.xml'
+            jacoco execPattern: 'spring-petclinic-main/target/jacoco.exec', classPattern: 'spring-petclinic-main/target/classes', sourcePattern: 'spring-petclinic-main/src/main/java'
             
-            // This captures the coverage data generated in the Build stage
-            jacoco execPattern: 'spring-petclinic-main/target/*.exec', classPattern: 'spring-petclinic-main/target/classes', sourcePattern: 'spring-petclinic-main/src/main/java'
-            
-            perfReport errorFailedThreshold: 100, errorUnstableThreshold: 80, sourceDataFiles: 'spring-petclinic-main/target/jmeter-results.jtl'
+            // Only attempt to report JMeter results if the file actually exists
+            script {
+                if (fileExists('spring-petclinic-main/target/jmeter-results.jtl')) {
+                    perfReport errorFailedThreshold: 100, errorUnstableThreshold: 80, sourceDataFiles: 'spring-petclinic-main/target/jmeter-results.jtl'
+                }
+            }
         }
     }
 }
