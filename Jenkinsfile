@@ -9,9 +9,13 @@ pipeline {
         stage('Build, Test & Coverage') {
             steps {
                 dir('spring-petclinic-main') {
+                    // Skip ITs to prevent database container crashes
                     script {
-                        // Using -DskipITs to avoid Docker container file-not-found errors
-                        sh 'mvn clean package jacoco:report -DskipITs'
+                        if (isUnix()) {
+                            sh 'mvn clean package jacoco:report -DskipITs'
+                        } else {
+                            bat 'mvn clean package jacoco:report -DskipITs'
+                        }
                     }
                 }
             }
@@ -21,19 +25,15 @@ pipeline {
             steps {
                 script {
                     dir('spring-petclinic-main') {
-                        // 1. Clean up and Re-install with forced fresh permissions
-                        sh 'rm -rf node_modules package-lock.json'
-                        sh 'npm install'
-                        
-                        // 2. Clear stale processes
+                        // 1. Reset environment
                         sh 'lsof -t -i:8081 | xargs kill -9 || true'
                         sh 'rm -rf cypress/results || true'
                         sh 'mkdir -p cypress/results'
                         
-                        // 3. Start app in background
+                        // 2. Start application
                         sh 'java -jar target/spring-petclinic-4.0.0-SNAPSHOT.jar --server.port=8081 > ../app.log 2>&1 &'
                         
-                        // 4. Wait for healthy
+                        // 3. Health check
                         sh '''
                             for i in {1..60}; do
                                 if curl -s http://localhost:8081/actuator/health | grep -q '"status":"UP"'; then exit 0; fi
@@ -42,8 +42,9 @@ pipeline {
                             exit 1
                         '''
                         
-                        // 5. RUN CYPRESS (Using npm exec to bypass path permission issues)
-                        sh 'npm exec cypress run -- --config baseUrl=http://localhost:8081'
+                        // 4. Force permissions and run tests
+                        sh 'chmod -R +x node_modules/.bin/'
+                        sh './node_modules/.bin/cypress run --config baseUrl=http://localhost:8081'
                     }
                 }
             }
@@ -59,11 +60,13 @@ pipeline {
     
     post {
         always {
-            // Updated paths to ensure Jenkins can find your generated reports
+            // These lines generate the trend graphs on the left sidebar
             junit allowEmptyResults: true, testResults: 'spring-petclinic-main/cypress/results/*.xml, spring-petclinic-main/target/surefire-reports/*.xml'
-            jacoco execPattern: 'spring-petclinic-main/target/jacoco.exec', classPattern: 'spring-petclinic-main/target/classes', sourcePattern: 'spring-petclinic-main/src/main/java'
             
-            // Only attempt to report JMeter results if the file actually exists
+            // This captures the coverage data and renders the Coverage Trend widget
+            jacoco execPattern: 'spring-petclinic-main/target/*.exec', classPattern: 'spring-petclinic-main/target/classes', sourcePattern: 'spring-petclinic-main/src/main/java'
+            
+            // Performance Trend widget
             script {
                 if (fileExists('spring-petclinic-main/target/jmeter-results.jtl')) {
                     perfReport errorFailedThreshold: 100, errorUnstableThreshold: 80, sourceDataFiles: 'spring-petclinic-main/target/jmeter-results.jtl'
